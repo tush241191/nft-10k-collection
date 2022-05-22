@@ -1,11 +1,11 @@
-const { RateLimit } = require("async-sema");
-const path = require("path");
+const { RateLimit } = require('async-sema');
+const path = require('path');
 const basePath = process.cwd();
-const fs = require("fs");
+const fs = require('fs');
 let [START, END] = process.argv.slice(2);
 START = parseInt(START);
 END = parseInt(END);
-let range = START ? END ? `${START}-${END}` : `${START}-Remaining` : "ALL";
+let range = START ? (END ? `${START}-${END}` : `${START}-Remaining`) : 'ALL';
 const yesno = require('yesno');
 
 const { txnCheck } = require(`${basePath}/utils/functions/txnCheck.js`);
@@ -18,6 +18,7 @@ const {
   MINT_TO_ADDRESS,
   CHAIN,
   GENERIC,
+  AUTH,
 } = require(`${basePath}/src/config.js`);
 const _limit = RateLimit(1); // Currently, minting is limited to 1/second.
 
@@ -31,13 +32,13 @@ async function main() {
     default: null,
   });
 
-  if(!ok) {
-    console.log("Exiting...");
+  if (!ok) {
+    console.log('Exiting...');
     process.exit(0);
   }
 
-  if (!fs.existsSync(path.join(`${basePath}/build`, "/minted"))) {
-    fs.mkdirSync(path.join(`${basePath}/build`, "minted"));
+  if (!fs.existsSync(path.join(`${basePath}/build`, '/minted'))) {
+    fs.mkdirSync(path.join(`${basePath}/build`, 'minted'));
   }
 
   const ipfsMetas = JSON.parse(fs.readFileSync(ipfsMetasFile));
@@ -61,29 +62,29 @@ async function main() {
       const mintedFile = fs.readFileSync(mintFile);
       if (mintedFile.length > 0) {
         const mintedMeta = JSON.parse(mintedFile);
-        if (mintedMeta.mintData.response !== "OK") {
+        if (mintedMeta.mintData.response !== 'OK') {
           console.log(
             `Response: ${mintedMeta.mintData.response}`,
             `Error: ${mintedMeta.mintData.error}`,
             `Retrying Edition #${edition}`
           );
-          throw "Edition not minted";
-        } else if(mintedMeta.mintData.transaction_verified === true) {
+          throw 'Edition not minted';
+        } else if (mintedMeta.mintData.transaction_verified === true) {
           console.log(`${meta.name} already minted`);
         } else {
           let check = await txnCheck(
             mintedMeta.mintData.transaction_external_url
           );
-          if (check.includes("Success")) {
+          if (check.includes('Success')) {
             mintedMeta.mintData.transaction_verified = true;
-            fs.writeFileSync(mintFile,JSON.stringify(mintedMeta, null, 2));
+            fs.writeFileSync(mintFile, JSON.stringify(mintedMeta, null, 2));
             console.log(`${meta.name} already minted`);
-          } else if (check.includes("Fail")) {
+          } else if (check.includes('Fail')) {
             console.log(
               `Transaction failed or not found, will retry Edition #${edition}`
             );
             throw `Transaction failed, will retry Edition #${edition}`;
-          } else if(check.includes("Pending")) {
+          } else if (check.includes('Pending')) {
             console.log(
               `Transaction transaction still pending for Edition #${edition}`
             );
@@ -107,15 +108,22 @@ async function main() {
           mint_to_address: MINT_TO_ADDRESS,
           token_id: edition,
         };
+
+        // console.log(mintInfo);
+        // process.exit(0);
+
         const url = 'https://api.nftport.xyz/v0/mints/customizable';
         const options = {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            Authorization: AUTH,
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(mintInfo),
         };
         let mintData = await fetchWithRetry(url, options);
+        // console.log(mintData);
+        // process.exit(0);
         const combinedData = {
           metaData: meta,
           mintData: mintData,
@@ -125,7 +133,7 @@ async function main() {
           JSON.stringify(combinedData, null, 2)
         );
 
-        if (mintData.response !== "OK") {
+        if (mintData.response !== 'OK') {
           console.log(
             `Minting ${meta.name} failed :(`,
             `Response: ${mintData.response}`,
@@ -140,7 +148,9 @@ async function main() {
     }
   }
 
-  console.log("Minting complete. To check for errors run command: npm run check_txns --dir=minted");
+  console.log(
+    'Minting complete. To check for errors run command: npm run check_txns --dir=minted'
+  );
 }
 
 main();

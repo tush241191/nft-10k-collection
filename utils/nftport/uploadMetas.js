@@ -1,29 +1,35 @@
-const path = require("path");
+const path = require('path');
 const basePath = process.cwd();
-const fs = require("fs");
+const fs = require('fs');
 
-const { RateLimit } = require("async-sema");
-const { fetchWithRetry } = require(`${basePath}/utils/functions/fetchWithRetry.js`);
+const { RateLimit } = require('async-sema');
+const {
+  fetchWithRetry,
+} = require(`${basePath}/utils/functions/fetchWithRetry.js`);
 
-const { LIMIT, GENERIC } = require(`${basePath}/src/config.js`);
+const { LIMIT, GENERIC, AUTH } = require(`${basePath}/src/config.js`);
 const _limit = RateLimit(LIMIT);
 
-const regex = new RegExp("^([0-9]+).json$");
+const regex = new RegExp('^([0-9]+).json$');
 let genericUploaded = false;
 
-if (!fs.existsSync(path.join(`${basePath}/build`, "/ipfsMetas"))) {
-  fs.mkdirSync(path.join(`${basePath}/build`, "ipfsMetas"));
+if (!fs.existsSync(path.join(`${basePath}/build`, '/ipfsMetas'))) {
+  fs.mkdirSync(path.join(`${basePath}/build`, 'ipfsMetas'));
 }
 
 let readDir = `${basePath}/build/json`;
 let writeDir = `${basePath}/build/ipfsMetas`;
 
 async function main() {
-  console.log(`Starting upload of ${GENERIC ? genericUploaded ? 'generic ' : '' : ''}metadata...`);
+  console.log(
+    `Starting upload of ${
+      GENERIC ? (genericUploaded ? 'generic ' : '') : ''
+    }metadata...`
+  );
   const allMetadata = [];
   const files = fs.readdirSync(readDir);
   files.sort(function (a, b) {
-    return a.split(".")[0] - b.split(".")[0];
+    return a.split('.')[0] - b.split('.')[0];
   });
   for (const file of files) {
     if (regex.test(file)) {
@@ -36,20 +42,21 @@ async function main() {
         const uploadedMetaFile = fs.readFileSync(uploadedMeta);
         if (uploadedMetaFile.length > 0) {
           const ipfsMeta = JSON.parse(uploadedMetaFile);
-          if (ipfsMeta.response !== "OK") throw "metadata not uploaded";
+          if (ipfsMeta.response !== 'OK') throw 'metadata not uploaded';
           allMetadata.push(ipfsMeta);
           console.log(`${metaData.name} metadata already uploaded`);
         } else {
-          throw "metadata not uploaded";
+          throw 'metadata not uploaded';
         }
       } catch (err) {
         try {
           await _limit();
-          const url = "https://api.nftport.xyz/v0/metadata";
+          const url = 'https://api.nftport.xyz/v0/metadata';
           const options = {
-            method: "POST",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
+              Authorization: AUTH,
+              'Content-Type': 'application/json',
             },
             body: jsonFile,
           };
@@ -70,12 +77,12 @@ async function main() {
 
   // Upload Generic Metadata if GENERIC is true
   if (GENERIC && !genericUploaded) {
-    if (!fs.existsSync(path.join(`${basePath}/build`, "/ipfsMetasGeneric"))) {
-      fs.mkdirSync(path.join(`${basePath}/build`, "ipfsMetasGeneric"));
+    if (!fs.existsSync(path.join(`${basePath}/build`, '/ipfsMetasGeneric'))) {
+      fs.mkdirSync(path.join(`${basePath}/build`, 'ipfsMetasGeneric'));
     }
     readDir = `${basePath}/build/genericJson`;
     writeDir = `${basePath}/build/ipfsMetasGeneric`;
-    
+
     genericUploaded = true;
     main();
   }
